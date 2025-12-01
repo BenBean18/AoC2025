@@ -1,0 +1,67 @@
+module Main
+
+-- https://juliu.is/peeling-zeroes/
+
+import System
+import Utilities
+import Data.Maybe
+import Data.Fin
+import Data.Nat
+import Data.List
+import System.Clock
+import Debug.Trace
+import Day1
+
+-- I was trying to do this with Data.List.index but haven't figured out proofs yet
+-- https://stackoverflow.com/questions/48995850/proving-an-index-is-within-list-bounds-given-index-1-is-within-bounds was what I was looking at
+-- gave up and wrote my own index function
+index : List a -> Nat -> Maybe a
+index (x :: xs) Z = Just x
+index (x :: xs) (S k) = index xs k
+index [] _ = Nothing
+
+runMultipleTimes : Nat -> IO a -> IO (List a)
+runMultipleTimes Z f = pure []
+runMultipleTimes (S k) f = do
+    a <- f
+    b <- runMultipleTimes k f
+    pure (a :: b)
+
+bench' : (String -> IO Int) -> String -> IO Integer
+bench' f input = do
+    start <- clockTime Process
+    a <- f input
+    end <- clockTime Process
+    pure ((seconds (timeDifference end start) * 1_000_000) + (nanoseconds (timeDifference end start) `div` 1_000))
+
+bench : (String -> IO Int) -> String -> IO ()
+bench f input = do
+    runtimes <- runMultipleTimes 100 (bench' f input)
+    putStr $ show (sum runtimes `div` 100) ++ "us"
+
+runPart : (String -> IO Int) -> String -> IO ()
+runPart f input = do
+    soln <- f input
+    putStr $ show soln
+
+partial main : IO ()
+main = do
+    args <- getArgs
+    if (length args >= 3) then
+        do
+            let day = fromMaybe "" (args `index` 1)
+            let partStr = fromMaybe "" (args `index` 2)
+            let doBench = fromMaybe "" (args `index` 3) == "b"
+            let doVisualize = fromMaybe "" (args `index` 3) == "v"
+            case integerToFin (cast partStr - 1) 2 of
+                Just part => do
+                    let message = (if doBench then "Benchmarking" else "Executing") ++ " Day " ++ day ++ " Part " ++ partStr
+                    putStrLn message
+                    contents <- getString $ "input/" ++ day ++ ".txt"
+                    let run = if doBench then bench else runPart
+                    if day == "1" then run (Day1.solve part) contents
+                        else putStr "That problem doesn't exist (or I haven't solved it yet)"
+                    putStrLn ""
+                Nothing => putStrLn $ "Part " ++ partStr ++ " is invalid"
+        
+        else putStrLn "Provide more arguments"

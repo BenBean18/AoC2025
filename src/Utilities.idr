@@ -113,6 +113,10 @@ vis : Bool -> Lazy String -> a -> a
 vis True s a = trace s a
 vis False s a = a
 
+public export
+traceWrap: Show t => t -> t
+traceWrap a = (trace $ show a) a
+
 -- this only exists in the bleeding edge version of idris ig
 -- public export
 -- insertWith : (v -> v -> v) -> k -> v -> SortedMap k v -> SortedMap k v

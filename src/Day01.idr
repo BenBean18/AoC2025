@@ -79,7 +79,7 @@ addWithWraparound a b = let (p, z) = addWithWraparound' a b in (trace $ "R" ++ s
 
 partial parseInstruction2 : DialState -> List Char -> DialState -- fold friendly!
 parseInstruction2 (State pos zeroes) (c :: xs) =
-    let delta = (if c == 'L' then (-1) else (1)) * (cast (pack xs))
+    let delta = (if c == 'L' then (-1) else (the Int 1)) * (cast (pack xs))
         unmoddedNext = pos + delta
         moddedNext = unmoddedNext `mod` 100
         numberWraps' = abs (unmoddedNext - moddedNext) `div` 100 + (if moddedNext == 0 && unmoddedNext == 0 then 1 else 0)

@@ -76,20 +76,19 @@ parseString' rowIdx (row :: rows) = foldl
 parseString' _ [] = empty
 
 public export
-(+) : (Int, Int) -> (Int, Int) -> (Int, Int)
-(+) (a1, b1) (a2, b2) = (a1 + a2, b1 + b2)
+Num (Int, Int) where
+    (+) (a1, b1) (a2, b2) = (a1 + a2, b1 + b2)
+    (*) (a1, b1) (a2, b2) = (a1 * a2, b1 * b2)
+    fromInteger _ = ?no_fromInteger
 
 public export
-(-) : (Int, Int) -> (Int, Int) -> (Int, Int)
-(-) (a1, b1) (a2, b2) = (a1 - a2, b1 - b2)
+Neg (Int, Int) where
+    (-) (a1, b1) (a2, b2) = (a1 - a2, b1 - b2)
+    negate (a, b) = (-a, -b)
 
-public export
-(*) : (Int, Int) -> (Int, Int) -> (Int, Int)
-(*) (a1, b1) (a2, b2) = (a1 * a2, b1 * b2)
-
-public export
-div : (Int, Int) -> (Int, Int) -> (Int, Int)
-div (a1, b1) (a2, b2) = (a1 `div` a2, b1 `div` b2)
+Integral (Int, Int) where
+    div (a1, b1) (a2, b2) = (a1 `div` a2, b1 `div` b2)
+    mod _ _ = ?no_mod
 
 public export
 twoDStringToMap : String -> SortedMap (Int, Int) Char
@@ -104,9 +103,9 @@ public export
 render2DMap : SortedMap (Int, Int) Char -> String
 render2DMap m =
     let s = sort (keys m)
-        (maxY, maxX) = ne last s
-        (minY, minX) = ne head s
-        toRender = map (\y => pack $ map (\x => (fromMaybe ' ') (lookup (cast y,cast x) m)) [minX..maxX]) [minY..maxY] in unlines toRender
+        (minY, maxY) = let l = map fst (sortBy (compare `on` fst) (keys m)) in (ne head l, ne last l)
+        (minX, maxX) = let l = map snd (sortBy (compare `on` snd) (keys m)) in (ne head l, ne last l)
+        toRender = map (\y => pack $ map (\x => (fromMaybe '.') (lookup (cast y,cast x) m)) [minX..maxX]) [minY..maxY] in unlines toRender
 
 public export
 vis : Bool -> Lazy String -> a -> a

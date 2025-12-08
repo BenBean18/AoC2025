@@ -35,8 +35,16 @@ part1 v input =
 
 -- Part 2
 
+isAccessible : SortedMap (Int, Int) Char -> (Int, Int) -> Bool
+isAccessible m pos = neighborRolls m pos < 4
+
+removeRolls : SortedMap (Int, Int) Char -> (Nat, SortedMap (Int, Int) Char)
+removeRolls m =
+    let removable = filter (isAccessible m) (rolls m)
+        newMap = foldl delete' m removable in if length removable == 0 then (0, m) else let next = removeRolls newMap in (length removable + fst next, snd next)
+
 partial part2 : Bool -> String -> Int
-part2 v input = 2
+part2 v input = cast (fst (removeRolls (twoDStringToMap input)))
 
 public export
 partial solve : Fin 2 -> Bool -> String -> IO Int

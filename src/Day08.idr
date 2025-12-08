@@ -50,8 +50,19 @@ part1 input =
 
 -- Part 2
 
+partial addToCircuitsUntilEnd: List (SortedSet (List Double)) -> List ((List Double, List Double)) -> (List Double, List Double)
+addToCircuitsUntilEnd groups (pair :: pairs) = 
+    let next = addToCircuits groups pair in
+        if length next == 1 then pair
+        else addToCircuitsUntilEnd next pairs
+
 partial part2 : String -> Int
-part2 input = 2
+part2 input =
+    let points = map parseCoordinate (lines input)
+        pairs = distancesBetween points
+        sortedPairs = map snd (sortBy (compare `on` fst) pairs)
+        lastEdge = addToCircuitsUntilEnd (map singleton points) sortedPairs
+        in cast $ sum $ (uncurry (zipWith (*))) (map (take 1) lastEdge)
 
 public export
 partial solve : Fin 2 -> String -> IO Int

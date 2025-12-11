@@ -64,6 +64,36 @@ part2 input =
         lastEdge = addToCircuitsUntilEnd (map singleton points) sortedPairs
         in cast $ sum $ (uncurry (zipWith (*))) (map (take 1) lastEdge)
 
+{-
+
+0, 1, 2, 3
+
+union 1 2
+
+0, 1, 1, 3
+
+union 3 1
+
+0, 1, 1, 1
+
+find 2
+
+0, 1, 1*, 1
+0, 1*, 1, 1
+done!
+
+ -}
+
+-- https://en.wikipedia.org/wiki/Disjoint-set_data_structure
+
+find: Vect n (Fin n) -> Fin n -> Fin n
+find l i = let parent = index i l in if parent == i then i else find l parent
+
+union: Vect n (Fin n) -> Fin n -> Fin n -> Vect n (Fin n)
+union l i1 i2 = 
+    let parent1 = find l i1
+        parent2 = find l i2 in replaceAt parent1 parent2 l
+
 public export
 partial solve : Fin 2 -> String -> IO Int
 solve 0 = pure . part1

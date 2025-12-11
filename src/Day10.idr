@@ -13,9 +13,6 @@ import Data.Vect
 
 -- Part 1
 
-partial part1 : String -> Int
-part1 input = 1
-
 -- This is simply finding the pseudoinverse of a matrix in the finite field containing only 0 and 1
 -- Time to implement row reduction I guess
 -- It'll be good review and fun hopefully, also linalg over finite fields is interesting
@@ -158,21 +155,6 @@ Matrix m n t = Vect m (Vect n t) -- m rows, n cols
 mm: Num t => {k: Nat} -> {m: Nat} -> {n: Nat} -> Matrix k m t -> Matrix m n t -> Matrix k n t
 mm a b = map (\rowA => sum $ map (\(coeff, rowB) => coeff `sm` rowB) (zip rowA b)) a -- rows combine rows to the right
 
-A: Matrix 4 2 Double
-A = [[0.16430899, 0.70363687], [0.83788205, 0.85589945], [0.23122045, 0.69569817], [0.12175106, 0.97940617]]
-
-B: Matrix 2 3 Double
-B = [[0.45950091, 0.48214121, 0.35390089], [0.75577587, 0.18892848, 0.71213365]]
-
-C: Matrix 2 2 Double
-C = [[2,2],[4,3]]
-
-D: Matrix 3 6 Double
-D = [[1,2,3,1,0,0],[4,5,6,0,1,0],[7,10,9,0,0,1]]
-
-E: Matrix 3 3 Double
-E = [[1,2,3],[4,5,6],[7,10,9]]
-
 enumerate: {n: Nat} -> Vect n t -> Vect n (Fin n, t)
 enumerate l = zip (allFins n) l
 
@@ -213,8 +195,73 @@ takeNCols k m = map (take k) m
 dropNCols: (k: Nat) -> Matrix m (k + n) t -> Matrix m n t
 dropNCols k m = map (drop k) m
 
-invert: Eq t => Field t => {n: Nat} -> Matrix (S n) (S n) t -> Matrix (S n) (S n) t
-invert m = dropNCols (S n) (rref (augment m (eye (S n))))
+inv: Eq t => Field t => {n: Nat} -> Matrix (S n) (S n) t -> Matrix (S n) (S n) t
+inv m = dropNCols (S n) (rref (augment m (eye (S n))))
+
+-- we have linearly independent rows (most likely, assuming no dups) so we use A.T @ (A A.T)^{-1}
+linv: Eq t => Field t => {m: Nat} -> {n: Nat} -> Matrix (S m) (S n) t -> Matrix (S n) (S m) t
+linv m = (inv ((transpose m) `mm` m)) `mm` (transpose m)
+
+rinv: Eq t => Field t => {m: Nat} -> {n: Nat} -> Matrix (S m) (S n) t -> Matrix (S n) (S m) t
+rinv m = (transpose m) `mm` (inv (m `mm` (transpose m)))
+
+A: Matrix 4 6 (Fin 2)
+A = transpose [[0,0,0,1],[0,1,0,1],[0,0,1,0],[0,0,1,1],[1,0,1,0],[1,1,0,0]]
+
+b: Matrix 4 1 (Fin 2)
+b = transpose [[0,1,1,0]]
+
+A_test: Matrix 3 3 Double
+A_test = [[0,1,1],[1,0,3],[4,5,0]]
+
+O: Fin 2
+O = 1
+
+Z: Fin 2
+Z = 0
+
+-- row exchanges make it so that we don't know the right combination of buttons to press (they've been reordered)
+-- but we still know the correct number so we're fine!
+
+buildVectFromText': String -> {n: Nat} -> Vect (S n) (Fin 2)
+buildVectFromText' s = sum (map (\w => onehot (the (Fin (S n)) (restrict n (cast w)))) (split (== ',') s))
+
+buildVectFromText: {n: Nat} -> String -> Vect (S n) (Fin 2)
+buildVectFromText s = buildVectFromText' (pack (ne tail (ne init (unpack s))))
+
+-- [.##.] (3) (1,3) (2) (2,3) (0,2) (0,1) {3,5,4,7}
+buildGoalFromText: Vect (S (S n)) Char -> Vect n (Fin 2)
+buildGoalFromText s = map (\c => if c == '#' then FS FZ else FZ) (tail (init s))
+
+magicLength: String -> Nat
+magicLength s = cast (natToInteger (length (ne Data.List.head (words s))) - cast 2)
+
+vectsForString: String -> Nat
+vectsForString s = cast (natToInteger (length (words s)) - cast 2)
+
+partial parseLine: (s: String) -> (Vect (S (magicLength s)) (Fin 2), Vect (vectsForString s) (Vect (S (magicLength s)) (Fin 2)))
+parseLine s =
+    let (goal :: vects) = ne init (words s)
+        n = length (ne Data.List.head (words s)) in (
+            reverse (FZ :: reverse (buildGoalFromText (fromJust @{believe_me (IsJust ((toVect (S (S (magicLength s))) (unpack goal))))} (toVect (S (S (magicLength s))) (unpack goal))))),
+            fromJust @{believe_me (IsJust (toVect (vectsForString s) (map (buildVectFromText {n=magicLength s}) vects)))} (toVect (vectsForString s) (map (buildVectFromText {n=magicLength s}) vects)))
+
+solveLine: {n: Nat} -> {k: Nat} -> (Vect (S (S n)) (Fin 2), Vect (S k) (Vect (S (S n)) (Fin 2))) -> Nat
+solveLine (goal, vects) =
+    let matrix: Matrix (S n) (S k) (Fin 2) = transpose (map init vects)
+        trimmedGoal: Vect (S n) (Fin 2) = init goal
+        soln: Matrix (S k) 1 (Fin 2) = ((rinv matrix) `mm` (transpose [trimmedGoal]))
+        tSoln: Matrix 1 (S k) (Fin 2) = transpose soln
+        flattened: Vect (S k) (Fin 2) = head tSoln in length (filter (== FS FZ) (toList flattened))
+
+result: (Vect 5 (Fin 2), Vect 6 (Vect 5 (Fin 2)))
+result = ([0, 1, 1, 0, 0], [[0, 0, 0, 1, 0], [0, 1, 0, 1, 0], [0, 0, 1, 0, 0], [0, 0, 1, 1, 0], [1, 0, 1, 0, 0], [1, 1, 0, 0, 0]])
+
+partial test: IO ()
+test = print (solveLine (parseLine "[.##.] (3) (1,3) (2) (2,3) (0,2) (0,1) {3,5,4,7}"))
+
+partial part1 : String -> Int
+part1 input = 1
 
 -- Part 2
 

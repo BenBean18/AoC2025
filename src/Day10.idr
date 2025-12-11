@@ -169,11 +169,15 @@ scaleToOne xs = case (filter (/= (the t zero)) (toList xs)) of
     [] => xs -- all zero
     (firstNonzero :: _) => (replicate n ((the t one) `div` firstNonzero)) * xs
 
+isColumnZero: Eq t => Field t => {m: Nat} -> {n: Nat} -> Fin n -> Matrix m n t -> Bool
+isColumnZero c m = let col = map (index c) m in 0 == (length (filter (/= (the t zero)) (toList col)))
+
 rowReduce': Eq t => Field t => {m: Nat} -> {n: Nat} -> Matrix (S m) (S n) t -> Fin (S m) -> Fin (S n) -> Matrix (S m) (S n) t
 rowReduce' [a] r c = [scaleToOne a]
 rowReduce' (x :: xs) r c =
     let pivot = index c (index r (x :: xs)) in
-        if pivot == (the t zero) then rowReduce' (reverse (x :: reverse xs)) r c
+        if isColumnZero c (x :: xs) then rowReduce' (eliminateAboveAndBelow (x :: xs) r c) r (finS c)
+        else if pivot == (the t zero) then rowReduce' (reverse (x :: reverse xs)) r c
         else if r == (the (Fin (S m)) last) then (eliminateAboveAndBelow (x :: xs) r c)
         else rowReduce' (eliminateAboveAndBelow (x :: xs) r c) (finS r) (finS c)
 
@@ -260,8 +264,17 @@ result = ([0, 1, 1, 0, 0], [[0, 0, 0, 1, 0], [0, 1, 0, 1, 0], [0, 0, 1, 0, 0], [
 partial test: IO ()
 test = print (solveLine (parseLine "[.##.] (3) (1,3) (2) (2,3) (0,2) (0,1) {3,5,4,7}"))
 
+vectorIsNowAtLeastTwo: {k: Nat} -> Vect n t -> Vect (S (S k)) t
+vectorIsNowAtLeastTwo v = fromJust @{believe_me (IsJust (toVect (S (S k)) (toList v)))} (toVect (S (S k)) (toList v))
+
+partial processLine: String -> Nat
+processLine s =
+    let (goal', vects') = parseLine s
+        goal = vectorIsNowAtLeastTwo {k=cast (natToInteger (length goal') - 2)} goal'
+        vects = vectorIsNowAtLeastTwo {k=cast (natToInteger (length vects') - 2)} $ map (vectorIsNowAtLeastTwo {k=cast (natToInteger (length goal') - 2)}) vects' in solveLine (goal, vects)
+
 partial part1 : String -> Int
-part1 input = 1
+part1 input = (trace $ show (map processLine (lines input))) $ cast $ sum $ map processLine (lines input)
 
 -- Part 2
 

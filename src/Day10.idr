@@ -198,6 +198,24 @@ rowReduce' (x :: xs) r c =
 rref: Eq t => Field t => {m: Nat} -> {n: Nat} -> Matrix (S m) (S n) t -> Matrix (S m) (S n) t
 rref a = map scaleToOne (rowReduce' a 0 0)
 
+onehot: HasZero t => HasOne t => {n: Nat} -> Fin n -> Vect n t
+onehot k = map (\i => if i == k then (the t one) else (the t zero)) (allFins n)
+
+eye: Eq t => Field t => (n: Nat) -> Matrix n n t
+eye n = map onehot (allFins n)
+
+augment: Matrix m j t -> Matrix m k t -> Matrix m (j + k) t
+augment a b = zipWith (++) a b
+
+takeNCols: (k: Nat) -> Matrix m (k + n) t -> Matrix m k t
+takeNCols k m = map (take k) m
+
+dropNCols: (k: Nat) -> Matrix m (k + n) t -> Matrix m n t
+dropNCols k m = map (drop k) m
+
+invert: Eq t => Field t => {n: Nat} -> Matrix (S n) (S n) t -> Matrix (S n) (S n) t
+invert m = dropNCols (S n) (rref (augment m (eye (S n))))
+
 -- Part 2
 
 partial part2 : String -> Int
